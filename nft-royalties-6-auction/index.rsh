@@ -1,12 +1,22 @@
 'reach 0.1';
 'use strict';
 
+const [isTransferOption, GIFT, SALE, AUCTION] = makeEnum(3);
+
 const AuctionProps = Object({
   startingBid: UInt,
   timeout: UInt,
 });
-
 const emptyAuction = { startingBid: 0, timeout: 0 };
+const AuctionInterface = {
+  getBid: Fun([UInt], Maybe(UInt)),
+  getAuctionProps: Fun([], AuctionProps),
+};
+
+const SaleInterface = {
+  buy: Fun([UInt], Null),
+  salePrice: Fun([], UInt),
+};
 
 export const main = Reach.App(() => {
   const Creator = Participant('Creator', {
@@ -14,15 +24,10 @@ export const main = Reach.App(() => {
     royalty: UInt,
   });
   const Owner = ParticipantClass('Owner', {
+    transferOption: Fun([], UInt),
     newOwner: Fun([], Address),
-    buy: Fun([UInt], Null),
-    getBid: Fun([UInt], Maybe(UInt)),
-  });
-  const Seller = ParticipantClass('Seller', {
-    salePrice: Fun([], UInt),
-  });
-  const Auctioneer = ParticipantClass('Auctioneer', {
-    getAuctionProps: Fun([], AuctionProps),
+    ...SaleInterface,
+    ...AuctionInterface,
   });
   const vNFT = View('NFT', {
     id: UInt,
@@ -53,29 +58,41 @@ export const main = Reach.App(() => {
   invariant(balance() == 0);
   while (true) {
     commit();
+    
+    Owner.only(() => {
+      const amOwner = this == owner;
+      const transferOption = amOwner ? declassify(interact.transferOption()) % 3 : 0;
+      assert(isTransferOption(transferOption));
+    });
+    Owner.publish(transferOption)
+      .when(amOwner)
+      .timeout(false);
+    require(this == owner);
+    commit();
 
     fork()
       .case(Owner,
         (() => {
-          const amOwner = this == owner;
-          const newOwner = amOwner ? declassify(interact.newOwner()) : owner;
+          const isGift = this == owner && transferOption == GIFT;
+          const newOwner = isGift ? declassify(interact.newOwner()) : owner;
           return {
             msg: newOwner,
-            when: amOwner,
+            when: isGift,
           };
         }),
         (newOwner) => {
           require(this == owner);
+          require(transferOption == GIFT);
           owner = newOwner;
           continue;
         })
-      .case(Seller,
+      .case(Owner,
         (() => {
-          const amOwner = this == owner;
-          const salePrice = amOwner ? declassify(interact.salePrice()) : 0;
+          const isSale = this == owner && transferOption == SALE;
+          const salePrice = isSale ? declassify(interact.salePrice()) : 0;
           return {
             msg: salePrice,
-            when: amOwner,
+            when: isSale,
           };
         }),
         (salePrice) => {
@@ -94,17 +111,18 @@ export const main = Reach.App(() => {
           owner = newOwner;
           continue;
         })
-      .case(Auctioneer,
+      .case(Owner,
         (() => {
-          const amOwner = this == owner;
-          const auctionProps = amOwner ? declassify(interact.getAuctionProps()) : emptyAuction;
+          const isAuction = this == owner && transferOption == AUCTION;
+          const auctionProps = isAuction ? declassify(interact.getAuctionProps()) : emptyAuction;
           return {
             msg: auctionProps,
-            when: amOwner,
+            when: isAuction,
           };
         }),
         (auctionProps) => {
           require(this == owner);
+          require(transferOption == AUCTION);
           require(typeof auctionProps == AuctionProps);
 
           const { startingBid, timeout } = auctionProps;
@@ -134,8 +152,8 @@ export const main = Reach.App(() => {
               )
               .timeRemaining(timeRemaining());
 
-          const salePrice = isFirstBid ? 0 : currentPrice;
-          royaltyTransfer(salePrice, owner);
+          const auctionPrice = isFirstBid ? 0 : currentPrice;
+          royaltyTransfer(auctionPrice, owner);
           owner = winner;
           continue;
         })
