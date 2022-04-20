@@ -1,6 +1,3 @@
-.vscode/
-build/
-node_modules/
-.reach/
-
-reach
+.vscode
+build
+.reach
