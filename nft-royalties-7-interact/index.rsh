@@ -144,13 +144,13 @@ export const main = Reach.App(() => {
                     ? declassify(interact.getBid(currentPrice))
                     : Maybe(UInt).None();
                   return ({
-                    when: maybe(mbid, false, ((bid) => bid > currentPrice)),
+                    when: maybe(mbid, false, ((bid) => isFirstBid ? bid >= currentPrice : bid > currentPrice)),
                     msg : fromSome(mbid, 0),
                   });
                 },
                 (bid) => bid,
                 (bid) => {
-                  require(bid > currentPrice);
+                  require(isFirstBid ? bid >= currentPrice : bid > currentPrice);
                   // Return funds to previous highest bidder
                   transfer(isFirstBid ? 0 : currentPrice).to(winner);
                   return [ this, false, bid ];
