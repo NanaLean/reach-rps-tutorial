@@ -97,17 +97,17 @@ interact.newOwner = async () => {
 interact.getAuctionProps = async () => {
   const startingBid = await ask.ask('What should be the starting bid?');
   const timeout = await ask.ask('How long should the auction run?');
-  return { startingBid, timeout };
+  return { startingBid: stdlib.parseCurrency(startingBid), timeout };
 }
 
 interact.getBid = async (currentBid) => {
   const bid = await ask.ask(`The current bid is ${currentBid}. How much do you want to bid?`);
-  return ['Some', bid];
+  return ['Some', stdlib.parseCurrency(bid)];
 }
 
 interact.salePrice = async () => {
-  const newOwner = await ask.ask('For how much do you want to sell the NFT?')
-  return newOwner;
+  const salePrice = await ask.ask('For how much do you want to sell the NFT?')
+  return stdlib.parseCurrency(salePrice);
 }
 
 interact.buy = async (salePrice) => {

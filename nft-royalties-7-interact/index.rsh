@@ -47,13 +47,13 @@ export const main = Reach.App(() => {
   require(royalty <= 100);
   vNFT.id.set(id);
 
-  const royaltyTransfer = (salePrice, newOwner) => {
+  const royaltyTransfer = (salePrice, owner) => {
     const royaltyPart = salePrice * royalty / 100;
     assert(royalty <= 100);
     assert(royaltyPart <= salePrice);
 
     transfer(royaltyPart).to(Creator);
-    transfer(salePrice - royaltyPart).to(newOwner);
+    transfer(salePrice - royaltyPart).to(owner);
   };
 
   var owner = Creator;
