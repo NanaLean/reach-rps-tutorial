@@ -101,7 +101,7 @@ interact.getAuctionProps = async () => {
 }
 
 interact.getBid = async (currentBid) => {
-  const bid = await ask.ask(`The current bid is ${currentBid}. How much do you want to bid?`);
+  const bid = await ask.ask(`The current bid is ${fmt(currentBid)}. How much do you want to bid?`);
   return ['Some', stdlib.parseCurrency(bid)];
 }
 
@@ -111,7 +111,7 @@ interact.salePrice = async () => {
 }
 
 interact.buy = async (salePrice) => {
-  const isBuy = await ask.ask(`The NFT is up for sale for ${salePrice}. Do you want to buy it?`, ask.yesno);
+  const isBuy = await ask.ask(`The NFT is up for sale for ${fmt(salePrice)}. Do you want to buy it?`, ask.yesno);
   if (!isBuy) {
     process.exit(0);
   }
