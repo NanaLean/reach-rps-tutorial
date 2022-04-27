@@ -18,15 +18,15 @@ const owners = [
 const auctionProps = {
   'Alice': {
     startingBid: stdlib.parseCurrency(0),
-    timeout: 60,
+    timeout: 300,
   },
   'Bob': {
     startingBid: stdlib.parseCurrency(1),
-    timeout: 40,
+    timeout: 400,
   },
   'Claire': {
     startingBid: stdlib.parseCurrency(3),
-    timeout: 50,
+    timeout: 500,
   }
 };
 
@@ -89,7 +89,7 @@ const makeOwner = (who, acc) => {
         await stopTrading(who);
       }
       trades--;
-      const price = stdlib.parseCurrency(10);
+      const price = stdlib.parseCurrency(0);
       console.log(`${who} is setting up the NFT for sale for ${fmt(price)}.`);
       return price;
     },

@@ -33,6 +33,9 @@ export const main = Reach.App(() => {
     id: UInt,
     owner: Address,
   });
+  const Logger = Events('Logger', {
+    change: [],
+  });
   init();
 
   Creator.only(() => {
@@ -44,19 +47,20 @@ export const main = Reach.App(() => {
   require(royalty <= 100);
   vNFT.id.set(id);
 
-  const royaltyTransfer = (salePrice, owner) => {
+  const royaltyTransfer = (salePrice, newOwner) => {
     const royaltyPart = salePrice * royalty / 100;
     assert(royalty <= 100);
     assert(royaltyPart <= salePrice);
 
     transfer(royaltyPart).to(Creator);
-    transfer(salePrice - royaltyPart).to(owner);
+    transfer(salePrice - royaltyPart).to(newOwner);
   };
 
   var owner = Creator;
   { vNFT.owner.set(owner); };
   invariant(balance() == 0);
   while (true) {
+    Logger.change();
     commit();
     
     Owner.only(() => {
@@ -109,7 +113,7 @@ export const main = Reach.App(() => {
             .pay(salePrice)
             .timeout(false);
 
-          royaltyTransfer(salePrice, owner);
+          royaltyTransfer(salePrice, newOwner);
           owner = newOwner;
           continue;
         })
