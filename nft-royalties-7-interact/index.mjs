@@ -51,7 +51,8 @@ const checkOwner = async () => {
   } else {
     console.log(`${stdlib.formatAddress(owner[1])} owns the NFT #${id[1]}.`);
   }
-  getBalance();
+  const after = await getBalance();
+  console.log(`Your balance is ${after}.\n`);
   return isOwner;
 };
 const newOnwerListener = async () => {

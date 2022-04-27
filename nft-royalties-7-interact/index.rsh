@@ -113,7 +113,7 @@ export const main = Reach.App(() => {
             .pay(salePrice)
             .timeout(false);
 
-          royaltyTransfer(salePrice, newOwner);
+          royaltyTransfer(salePrice, owner);
           owner = newOwner;
           continue;
         })
