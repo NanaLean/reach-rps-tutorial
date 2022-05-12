@@ -15,6 +15,33 @@ const owners = [
   ['Claire', accClaire],
 ];
 
+const auctionProps = {
+  'Alice': {
+    startingBid: stdlib.parseCurrency(0),
+    timeout: 300,
+  },
+  'Bob': {
+    startingBid: stdlib.parseCurrency(1),
+    timeout: 400,
+  },
+  'Claire': {
+    startingBid: stdlib.parseCurrency(3),
+    timeout: 500,
+  }
+};
+
+const bids = {
+  'Alice': {
+    maxBid: stdlib.parseCurrency(10),
+  },
+  'Bob': {
+    maxBid: stdlib.parseCurrency(40),
+  },
+  'Claire': {
+    maxBid: stdlib.parseCurrency(20),
+  }
+};
+
 const fmt = (x) => stdlib.formatCurrency(x, 4);
 const getBalance = async (who) => fmt(await stdlib.balanceOf(who));
 
@@ -43,6 +70,9 @@ let trades = 3;
 const makeOwner = (who, acc) => {
   const ctc = acc.contract(backend, ctcAlice.getInfo());
   return ctc.p.Owner({
+    transferOption: () => {
+      return trades;
+    },
     newOwner: async () => {
       await externalViewer();
       if (trades == 0) {
@@ -53,39 +83,20 @@ const makeOwner = (who, acc) => {
       console.log(`${who} sends the NFT to ${owner[0]}.`);
       return owner[1];
     },
-    buy: (price) => {
-      console.log(`${who} buys the NFT for ${fmt(price)}.`)
-    },
-    getBid: (price) => {
-      if (price < bids[who].maxBid) {
-        const bid = stdlib.add(price, stdlib.parseCurrency(1));
-        console.log(`${who} sees that the current bid is ${fmt(price)}. They bid ${fmt(bid)}.`);
-        return ['Some', bid];
-      } else {
-        return ['None', null];
-      }
-    },
-  });
-};
-const makeSeller = (who, acc) => {
-  const ctc = acc.contract(backend, ctcAlice.getInfo());
-  return ctc.p.Seller({
     salePrice: async () => {
       await externalViewer();
       if (trades == 0) {
         await stopTrading(who);
       }
       trades--;
-      const price = stdlib.parseCurrency(10);
+      const price = stdlib.parseCurrency(0);
       console.log(`${who} is setting up the NFT for sale for ${fmt(price)}.`);
       return price;
-    }
-  });
-};
-const makeAuctioneer = (who, acc) => {
-  const ctc = acc.contract(backend, ctcAlice.getInfo());
-  return ctc.p.Auctioneer({
-    getAuctionProps: (() => {
+    },
+    buy: (price) => {
+      console.log(`${who} buys the NFT for ${fmt(price)}.`)
+    },
+    getAuctionProps: async () => {
       await externalViewer();
       if (trades == 0) {
         await stopTrading(who);
@@ -93,7 +104,16 @@ const makeAuctioneer = (who, acc) => {
       trades--;
       console.log(`${who} is setting up the NFT for auction at ${fmt(auctionProps[who].startingBid)}.`);
       return auctionProps[who];
-    }),
+    },
+    getBid: (price) => {
+      const bid = stdlib.add(price, stdlib.parseCurrency(1));
+      if (stdlib.le(bid, bids[who].maxBid)) {
+        console.log(`${who} sees that the current bid is ${fmt(price)}. They bid ${fmt(bid)}.`);
+        return ['Some', bid];
+      } else {
+        return ['None', null];
+      }
+    },
   });
 };
 const externalViewer = async () => {
@@ -110,7 +130,7 @@ await Promise.all([
     },
     royalty: 20,
   }),
-  makeAuctioneer(...owners[0]),
+  makeOwner(...owners[0]),
   makeOwner(...owners[1]),
-  makeSeller(...owners[2]),
+  makeOwner(...owners[2]),
 ]);

@@ -33,6 +33,9 @@ export const main = Reach.App(() => {
     id: UInt,
     owner: Address,
   });
+  const Logger = Events('Logger', {
+    change: [],
+  });
   init();
 
   Creator.only(() => {
@@ -57,6 +60,7 @@ export const main = Reach.App(() => {
   { vNFT.owner.set(owner); };
   invariant(balance() == 0);
   while (true) {
+    Logger.change();
     commit();
     
     Owner.only(() => {
@@ -140,13 +144,13 @@ export const main = Reach.App(() => {
                     ? declassify(interact.getBid(currentPrice))
                     : Maybe(UInt).None();
                   return ({
-                    when: maybe(mbid, false, ((bid) => bid > currentPrice)),
+                    when: maybe(mbid, false, ((bid) => isFirstBid ? bid >= currentPrice : bid > currentPrice)),
                     msg : fromSome(mbid, 0),
                   });
                 },
                 (bid) => bid,
                 (bid) => {
-                  require(bid > currentPrice);
+                  require(isFirstBid ? bid >= currentPrice : bid > currentPrice);
                   // Return funds to previous highest bidder
                   transfer(isFirstBid ? 0 : currentPrice).to(winner);
                   return [ this, false, bid ];

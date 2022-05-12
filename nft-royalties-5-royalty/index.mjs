@@ -43,6 +43,9 @@ let trades = 3;
 const makeOwner = (who, acc) => {
   const ctc = acc.contract(backend, ctcAlice.getInfo());
   return ctc.p.Owner({
+    transferOption: () => {
+      return trades;
+    },
     newOwner: async () => {
       await externalViewer();
       if (trades == 0) {
@@ -53,14 +56,6 @@ const makeOwner = (who, acc) => {
       console.log(`${who} sends the NFT to ${owner[0]}.`);
       return owner[1];
     },
-    buy: (price) => {
-      console.log(`${who} buys the NFT for ${fmt(price)}.`)
-    },
-  });
-};
-const makeSeller = (who, acc) => {
-  const ctc = acc.contract(backend, ctcAlice.getInfo());
-  return ctc.p.Seller({
     salePrice: async () => {
       await externalViewer();
       if (trades == 0) {
@@ -70,7 +65,10 @@ const makeSeller = (who, acc) => {
       const price = stdlib.parseCurrency(10);
       console.log(`${who} is setting up the NFT for sale for ${fmt(price)}.`);
       return price;
-    }
+    },
+    buy: (price) => {
+      console.log(`${who} buys the NFT for ${fmt(price)}.`)
+    },
   });
 };
 const externalViewer = async () => {
@@ -89,5 +87,5 @@ await Promise.all([
   }),
   makeOwner(...owners[0]),
   makeOwner(...owners[1]),
-  makeSeller(...owners[2]),
+  makeOwner(...owners[2]),
 ]);
