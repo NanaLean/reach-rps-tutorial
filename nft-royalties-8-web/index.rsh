@@ -22,6 +22,7 @@ export const main = Reach.App(() => {
   const Creator = Participant('Creator', {
     getId: Fun([], UInt),
     royalty: UInt,
+    url: Bytes(256),
   });
   const Owner = ParticipantClass('Owner', {
     transferOption: Fun([], UInt),
@@ -31,7 +32,10 @@ export const main = Reach.App(() => {
   });
   const vNFT = View('NFT', {
     id: UInt,
+    royalty: UInt,
+    url: Bytes(256),
     owner: Address,
+    option: UInt,
   });
   const Logger = Events('Logger', {
     change: [],
@@ -42,10 +46,13 @@ export const main = Reach.App(() => {
     const id = declassify(interact.getId());
     const royalty = declassify(interact.royalty) % 100;
     assert(royalty <= 100);
+    const url = declassify(interact.url);
   });
-  Creator.publish(id, royalty);
+  Creator.publish(id, royalty, url);
   require(royalty <= 100);
   vNFT.id.set(id);
+  vNFT.royalty.set(royalty);
+  vNFT.url.set(url);
 
   const royaltyTransfer = (salePrice, owner) => {
     const royaltyPart = salePrice * royalty / 100;
@@ -61,23 +68,16 @@ export const main = Reach.App(() => {
   invariant(balance() == 0);
   while (true) {
     Logger.change();
-    commit();
-    
-    Owner.only(() => {
-      const amOwner = this == owner;
-      const transferOption = amOwner ? declassify(interact.transferOption()) % 3 : 0;
-      assert(isTransferOption(transferOption));
-    });
-    Owner.publish(transferOption)
-      .when(amOwner)
-      .timeout(false);
-    require(this == owner);
+    vNFT.option.set(GIFT);
     commit();
 
     fork()
       .case(Owner,
         (() => {
-          const isGift = this == owner && transferOption == GIFT;
+          const amOwner = this == owner;
+          const option = amOwner ? declassify(interact.transferOption()) % 3 : 0;
+          assert(isTransferOption(option));
+          const isGift = amOwner && option == GIFT;
           const newOwner = isGift ? declassify(interact.newOwner()) : owner;
           return {
             msg: newOwner,
@@ -86,13 +86,15 @@ export const main = Reach.App(() => {
         }),
         (newOwner) => {
           require(this == owner);
-          require(transferOption == GIFT);
           owner = newOwner;
           continue;
         })
       .case(Owner,
         (() => {
-          const isSale = this == owner && transferOption == SALE;
+          const amOwner = this == owner;
+          const option = amOwner ? declassify(interact.transferOption()) % 3 : 0;
+          assert(isTransferOption(option));
+          const isSale = amOwner && option == SALE;
           const salePrice = isSale ? declassify(interact.salePrice()) : 0;
           return {
             msg: salePrice,
@@ -101,6 +103,8 @@ export const main = Reach.App(() => {
         }),
         (salePrice) => {
           require(this == owner);
+          vNFT.option.set(SALE);
+          
           commit();
 
           Owner.only(() => {
@@ -119,7 +123,10 @@ export const main = Reach.App(() => {
         })
       .case(Owner,
         (() => {
-          const isAuction = this == owner && transferOption == AUCTION;
+          const amOwner = this == owner;
+          const option = amOwner ? declassify(interact.transferOption()) % 3 : 0;
+          assert(isTransferOption(option));
+          const isAuction = amOwner && option == AUCTION;
           const auctionProps = isAuction ? declassify(interact.getAuctionProps()) : emptyAuction;
           return {
             msg: auctionProps,
@@ -128,8 +135,9 @@ export const main = Reach.App(() => {
         }),
         (auctionProps) => {
           require(this == owner);
-          require(transferOption == AUCTION);
           require(typeof auctionProps == AuctionProps);
+
+          vNFT.option.set(AUCTION);
 
           const { startingBid, timeout } = auctionProps;
           const [ timeRemaining, keepGoing ] = makeDeadline(timeout);

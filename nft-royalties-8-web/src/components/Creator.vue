@@ -4,6 +4,12 @@
     <br />
     <h3>Set royalty:</h3>
     <input type="number" v-model="royalty" min="0" max="100" />
+    <br />
+    <br />
+    <h3>Set URL:</h3>
+    <input v-model="url" maxlength="256" />
+    <br />
+    <br />
     <button @click="create">Create</button>
   </div>
   <owner v-else :initialCtc="ctcInfo" :acc="acc"/>
@@ -31,7 +37,8 @@ export default {
     return {
       ctc: undefined,
       ctcInfo: undefined,
-      royalty: 1,
+      royalty: 10,
+      url: '',
     }
   },
   methods: {
@@ -43,7 +50,7 @@ export default {
     },
     getId() {
       return reach.randomUInt();
-    }
+    },
   }
 }
 </script>

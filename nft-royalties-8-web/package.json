@@ -10,7 +10,9 @@
   "dependencies": {
     "@reach-sh/stdlib": "^0.1.10-rc.3",
     "core-js": "^3.8.3",
-    "vue": "^3.2.13"
+    "vue": "^3.2.13",
+    "bootstrap": "^4.6.1",
+    "bootstrap-vue": "^2.21.2"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",

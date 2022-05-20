@@ -24,7 +24,9 @@
     </div>
   </div>
   <div v-else-if="owner">
-    You do not own this asset!
+    <h3>You do not own this asset!</h3>
+    <button @click="view = 'buy'">Buy</button>
+    <button @click="view = 'bid'">Bid</button>
   </div>
   <component :is="view" :ctc="ctc" />
 </template>
