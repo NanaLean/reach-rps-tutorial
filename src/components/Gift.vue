@@ -1,41 +1,47 @@
 <template>
-  <div>Gift</div>
-  <div>Address</div>
-  <input v-model="address" />
-  <button @click="gift">Gift</button>
+  <div>
+    <div class="mb-4">
+      <h5>Address:</h5>
+      <b-input v-model="address" />
+    </div>
+    <b-button variant="info" @click="gift" :disabled="isLoading">
+      <b-spinner v-if="isLoading" class="mr-2" small />
+      <b-icon v-else class="mr-2" icon="gift" />
+      Gift
+    </b-button>
+  </div>
 </template>
 
 <script>
-import * as backend from '../../build/index.main.mjs'
+import { mapState } from 'vuex';
+import ownerInterface from '@/utils/ownerInterface';
 
 export default {
   name: 'GiftView',
-  props: {
-    ctc: {
-      type: Object,
-      required: true,
-    }
-  },
   data() {
     return {
+      isLoading: false,
       address: '',
     };
   },
+  computed: {
+    ...mapState({
+      contract: (state) => state.contract,
+    }),
+  },
   methods: {
     async gift() {
-      backend.Owner(this.ctc, this);
+      this.isLoading = true;
+      this.contract.p.Owner(Object.assign(ownerInterface, this));
     },
     transferOption() {
-      console.log('Gift NFT');
       return 0;
     },
     newOwner() {
-      console.log(`To: ${this.address}`)
       return this.address;
     },
-  }
-}
+  },
+};
 </script>
 
-<style>
-</style>
+<style></style>

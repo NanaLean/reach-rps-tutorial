@@ -1,98 +1,91 @@
 <template>
-  <div class="header">
-    <button v-if="!acc" @click="connect">Connect</button>
-    <template v-else>
-      <div class="balance">{{ bal }}</div>
-      <div class="account">{{ acc ? acc.networkAccount.addr : '' }}</div>
-    </template>
-  </div>
-  <div class="content">
-    <h1>Transferable Royalty NFTs</h1>
-    <br />
-    <template v-if="acc && !view">
-      <h3>Select a role:</h3>
-      <br />
-      <button @click="view = 'creator'">Creator</button>
-      <p>Create an NFT.</p>
-      <br />
-      <button @click="view = 'owner'">Owner</button>
-      <p>Interact with NFTs you own or buy NFTs from others.</p>
-    </template>
-    <h3 v-else-if="!acc">Please connect your Wallet!</h3>
-    <component v-else :is="view" :acc="acc" />
+  <div id="app" class="d-flex flex-column">
+    <navbar />
+    <div
+      class="d-flex flex-grow-1 flex-column align-items-center p-5"
+      :class="{ 'justify-content-center': !view || !account }"
+    >
+      <b-spinner v-if="isLoading" />
+      <template v-else>
+        <h3 v-if="!account">Please connect your Wallet!</h3>
+        <template v-else-if="!view">
+          <b-button variant="info" @click="view = 'creator'" size="lg"
+            ><b-icon class="mr-2" icon="plus-circle-fill" />Create</b-button
+          >
+          <p class="text-muted p-2 mb-5">Create a new NFT.</p>
+          <b-button variant="info" @click="view = 'owner'" size="lg"
+            ><b-icon class="mr-2" icon="currency-exchange" />Interact</b-button
+          >
+          <p class="text-muted p-2">Interact with NFTs you own or from others.</p>
+        </template>
+        <component v-else :is="view" />
+      </template>
+    </div>
   </div>
 </template>
 
 <script>
-import { loadStdlib } from '@reach-sh/stdlib';
-import { ALGO_MyAlgoConnect as MyAlgoConnect } from '@reach-sh/stdlib';
-import Creator from '@/components/Creator.vue'
-import Owner from '@/components/Owner.vue'
+import { mapState } from 'vuex';
 
-const reach = loadStdlib({ REACH_CONNECTOR_MODE: 'ALGO' });
-reach.setWalletFallback(reach.walletFallback({ providerEnv: 'TestNet', MyAlgoConnect }));
+import Navbar from '@/components/Navbar.vue';
+import Creator from '@/components/Creator.vue';
+import Owner from '@/components/Owner.vue';
 
 export default {
   name: 'App',
   components: {
-    'creator': Creator,
-    'owner': Owner,
+    navbar: Navbar,
+    creator: Creator,
+    owner: Owner,
   },
   data() {
     return {
-      acc: undefined,
-      bal: undefined,
+      isLoading: true,
       view: undefined,
-    }
+    };
   },
-  methods: {
-    async connect() {
-      const acc = await reach.getDefaultAccount();
-      const balAtomic = await reach.balanceOf(acc);
-      const bal = reach.formatCurrency(balAtomic, 4);
-      this.acc = acc;
-      this.bal = bal;
+  async mounted() {
+    this.view = undefined;
+    await this.$store.dispatch('refreshAccount');
+    this.isLoading = false;
+  },
+  computed: {
+    ...mapState({
+      account: (state) => state.account,
+      contract: (state) => state.contract,
+    }),
+  },
+  watch: {
+    contract: {
+      handler(newValue) {
+        if (newValue) {
+          this.view = 'owner';
+        }
+      },
+      immediate: true,
     },
-  }
-}
+  },
+};
 </script>
 
 <style>
-@import './assets/base.css';
+@import url('https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Montserrat&display=swap');
+
+html,
+body {
+  background-color: #17191c !important;
+}
 
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Montserrat', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
+  color: var(--light);
   height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
-.header {
-  height: 40px;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 8px 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.content {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-}
-
-.account {
-  width: 60px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
-
-.account, .balance {
-  margin-right: 16px;
+.btn {
+  font-weight: bold !important;
 }
 </style>

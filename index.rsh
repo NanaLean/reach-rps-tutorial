@@ -21,8 +21,9 @@ const SaleInterface = {
 export const main = Reach.App(() => {
   const Creator = Participant('Creator', {
     getId: Fun([], UInt),
-    royalty: UInt,
+    name: Bytes(128),
     url: Bytes(256),
+    royalty: UInt,
   });
   const Owner = ParticipantClass('Owner', {
     transferOption: Fun([], UInt),
@@ -32,10 +33,20 @@ export const main = Reach.App(() => {
   });
   const vNFT = View('NFT', {
     id: UInt,
-    royalty: UInt,
+    name: Bytes(128),
     url: Bytes(256),
+    royalty: UInt,
     owner: Address,
     option: UInt,
+  });
+  const vSell = View('Sell', {
+    price: UInt,
+  });
+  const vAuction = View('Auction', {
+    startingBid: UInt,
+    currentBid: UInt,
+    start: UInt,
+    timeout: UInt,
   });
   const Logger = Events('Logger', {
     change: [],
@@ -44,15 +55,17 @@ export const main = Reach.App(() => {
 
   Creator.only(() => {
     const id = declassify(interact.getId());
+    const nftName = declassify(interact.name);
+    const url = declassify(interact.url);
     const royalty = declassify(interact.royalty) % 100;
     assert(royalty <= 100);
-    const url = declassify(interact.url);
   });
-  Creator.publish(id, royalty, url);
+  Creator.publish(id, nftName, url, royalty);
   require(royalty <= 100);
   vNFT.id.set(id);
-  vNFT.royalty.set(royalty);
+  vNFT.name.set(nftName);
   vNFT.url.set(url);
+  vNFT.royalty.set(royalty);
 
   const royaltyTransfer = (salePrice, owner) => {
     const royaltyPart = salePrice * royalty / 100;
@@ -67,8 +80,8 @@ export const main = Reach.App(() => {
   { vNFT.owner.set(owner); };
   invariant(balance() == 0);
   while (true) {
-    Logger.change();
     vNFT.option.set(GIFT);
+    Logger.change();
     commit();
 
     fork()
@@ -104,7 +117,8 @@ export const main = Reach.App(() => {
         (salePrice) => {
           require(this == owner);
           vNFT.option.set(SALE);
-          
+          vSell.price.set(salePrice);
+          Logger.change();
           commit();
 
           Owner.only(() => {
@@ -138,6 +152,11 @@ export const main = Reach.App(() => {
           require(typeof auctionProps == AuctionProps);
 
           vNFT.option.set(AUCTION);
+          vAuction.startingBid.set(auctionProps.startingBid);
+          vAuction.start.set(thisConsensusSecs());
+          const getSecs = (t) => t.match({ Left: (_) => 0, Right: (r) => { return r }});
+          vAuction.timeout.set(getSecs(relativeSecs(auctionProps.timeout)));
+          Logger.change();
 
           const { startingBid, timeout } = auctionProps;
           const [ timeRemaining, keepGoing ] = makeDeadline(timeout);
@@ -145,6 +164,9 @@ export const main = Reach.App(() => {
           const [ winner, isFirstBid, currentPrice ] =
             parallelReduce([ owner, true, startingBid ])
               .invariant(balance() == (isFirstBid ? 0 : currentPrice))
+              .define(() => {
+                vAuction.currentBid.set(currentPrice);
+              })
               .while(keepGoing())
               .case(Owner,
                 () => {
@@ -161,6 +183,7 @@ export const main = Reach.App(() => {
                   require(isFirstBid ? bid >= currentPrice : bid > currentPrice);
                   // Return funds to previous highest bidder
                   transfer(isFirstBid ? 0 : currentPrice).to(winner);
+                  Logger.change();
                   return [ this, false, bid ];
                 }
               )

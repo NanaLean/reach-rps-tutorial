@@ -1,15 +1,14 @@
 <template>
   <div>
-    <div class="mb-4">
-      <h5>Price:</h5>
-      <b-input-group append="ALGO">
-        <b-input type="number" min="0" max="10000000000" v-model="price" />
-      </b-input-group>
+    <h5>Price:</h5>
+    <div class="d-flex justify-content-center align-items-center mb-4">
+      <img class="icon" src="/img/algorand_white.svg" />
+      <span class="ml-2">{{ price }}</span>
     </div>
-    <b-button variant="info" @click="sell" :disabled="isLoading">
+    <b-button v-if="!isOwner" variant="info" @click="buyNFT" :disabled="isLoading">
       <b-spinner v-if="isLoading" class="mr-2" small />
       <b-icon v-else class="mr-2" icon="tag" />
-      Sell
+      Buy
     </b-button>
   </div>
 </template>
@@ -22,11 +21,19 @@ import { loadStdlib } from '@reach-sh/stdlib';
 const reach = loadStdlib({ REACH_CONNECTOR_MODE: 'ALGO' });
 
 export default {
-  name: 'SellView',
+  name: 'BuyView',
+  props: {
+    isOwner: {
+      type: Boolean,
+      required: true,
+    },
+  },
   data() {
     return {
       isLoading: false,
-      price: 1,
+      price: undefined,
+      timeout: undefined,
+      break: false,
     };
   },
   computed: {
@@ -34,19 +41,24 @@ export default {
       contract: (state) => state.contract,
     }),
   },
+  async mounted() {
+    const price = await this.contract.v.Sell.price();
+    this.price = reach.formatCurrency(price[1]);
+  },
   methods: {
-    async sell() {
+    buyNFT() {
       this.isLoading = true;
       this.contract.p.Owner(Object.assign(ownerInterface, this));
     },
-    transferOption() {
-      return 1;
-    },
-    salePrice() {
-      return reach.parseCurrency(this.price);
+    buy() {
+      return;
     },
   },
 };
 </script>
 
-<style></style>
+<style>
+.icon {
+  height: 11px;
+}
+</style>
